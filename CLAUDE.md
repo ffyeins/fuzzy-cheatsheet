@@ -6,14 +6,18 @@ Fuzzy-search all markdown files under a configurable directory (`SEARCH_DIR`) an
 
 ### How it works
 
-1. **Input generation**: Recursively finds all `.md` files under `SEARCH_DIR`. Builds fzf entries in the format `filepath<TAB>line_number<TAB>line_content`. Header lines (`^#`) are listed first, then all other non-empty lines, so header matches appear above content matches in fzf.
+1. **Input generation**: Single `find` + `awk` pass over all `.md` files under `SEARCH_DIR`. Builds fzf entries in the format `filepath<TAB>line_number<TAB>line_content`. Header lines (`^#`) are listed first, then all other non-empty lines, so header matches appear above content matches in fzf.
 2. **fzf**: Displays only the line content (`--with-nth 3..`). The filepath and line number are carried as hidden fields for the preview and selection logic.
-3. **Preview**: A temp script (`/tmp/fuzzy_cheatsheet_preview.sh`) is written at runtime. It finds the nearest preceding header by line number, then extracts the full section using awk.
-4. **Selection output**: Same awk extraction as preview, piped through `mdprint.sh`.
+3. **Preview**: Calls `extract_section.sh` directly via `--preview`.
+4. **Selection output**: Calls `extract_section.sh` on the selected entry, which renders via `mdprint.sh`.
+
+## extract_section.sh
+
+Standalone helper that extracts and renders a markdown section. Takes a single tab-delimited argument (`filepath<TAB>line_num<TAB>line_content`), finds the nearest preceding header, extracts the section with awk, balances code fences, and renders via `mdprint.sh`.
+
+Used by both the fzf preview and the final selection output in `fuzzy_cheatsheet.sh`.
 
 ### Section extraction (awk)
-
-The awk logic is shared between preview and final output:
 
 - Starts at a specific line number (`NR == start`), not by pattern matching, to avoid ambiguity with duplicate headers.
 - Tracks the header level (`##` = 2, `###` = 3, etc.).
@@ -26,12 +30,14 @@ The awk logic is shared between preview and final output:
 - **Tab-delimited fields** with line numbers: avoids re-searching the file with `grep -nF` which could match the wrong occurrence of duplicate content.
 - **`--` in grep calls**: prevents lines starting with `-` from being interpreted as grep options.
 - **Fence balancing**: ensures `mdprint.sh` always receives valid markdown even if the source file has unclosed fences.
+- **Single-pass scanning**: one `find | awk` pipeline separates headers from content, replacing the previous two `find` invocations.
+- **No runtime script generation**: `extract_section.sh` is a real file, eliminating the previous pattern of writing a preview script to `/tmp/` at runtime.
 
 ### Dependencies
 
 - `fzf` for fuzzy selection
-- `~/dotfiles/scripts/mdprint.sh` for rendering markdown
-- `SEARCH_DIR` variable (line 2) controls which directory is searched
+- `MDPRINT` env var for the markdown renderer (defaults to `$HOME/dotfiles/scripts/mdprint.sh`)
+- `SEARCH_DIR` env var controls which directory is searched (defaults to `docs/` next to the script)
 
 ### Related
 
