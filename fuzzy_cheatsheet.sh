@@ -2,7 +2,7 @@
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SEARCH_DIR="${SEARCH_DIR:-$SCRIPT_DIR/docs/}"
+SEARCH_DIR="${SEARCH_DIR:-$HOME/dotfiles/docs/}"
 EXTRACT="$SCRIPT_DIR/extract_section.sh"
 
 if [[ ! -x "$EXTRACT" ]]; then

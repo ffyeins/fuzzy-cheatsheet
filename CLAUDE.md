@@ -37,7 +37,7 @@ Used by both the fzf preview and the final selection output in `fuzzy_cheatsheet
 
 - `fzf` for fuzzy selection
 - `MDPRINT` env var for the markdown renderer (defaults to `$HOME/dotfiles/scripts/mdprint.sh`)
-- `SEARCH_DIR` env var controls which directory is searched (defaults to `docs/` next to the script)
+- `SEARCH_DIR` env var controls which directory is searched (defaults to `~/dotfiles/docs/`)
 
 ### Related
 
@@ -45,4 +45,4 @@ Used by both the fzf preview and the final selection output in `fuzzy_cheatsheet
 
 ### Test files
 
-`docs/` (project-local) contains mock markdown files for testing (3 in root, 1 each in `sub-a/` and `sub-b/`). This is the default `SEARCH_DIR`.
+`docs/` (project-local) contains mock markdown files for testing (3 in root, 1 each in `sub-a/` and `sub-b/`). Use `SEARCH_DIR=docs/` to test locally.
