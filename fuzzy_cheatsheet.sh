@@ -13,7 +13,7 @@ fi
 # Build fzf input: headers first, then other non-empty lines
 # Format: filepath<TAB>line_number<TAB>line_content
 # Single find pass — awk separates headers from content
-find "$SEARCH_DIR" -name '*.md' -print0 | xargs -0 awk '
+find -L "$SEARCH_DIR" -name '*.md' -print0 | xargs -0 awk '
   /^#/  { headers = headers FILENAME "\t" FNR "\t" $0 "\n"; next }
   NF    { content = content FILENAME "\t" FNR "\t" $0 "\n" }
   END   { printf "%s%s", headers, content }
