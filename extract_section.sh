@@ -22,7 +22,12 @@ if [[ ! -f "$filepath" ]]; then
 fi
 
 # Find nearest preceding header line number
-header_line=$(head -n "$line_num" "$filepath" | grep -n -- "^#" | tail -1 | cut -d: -f1)
+header_line=$(awk -v end="$line_num" '
+  NR > end       { exit }
+  /^```/         { in_code = !in_code; next }
+  !in_code && /^#/ { last = NR }
+  END            { if (last) print last }
+' "$filepath")
 
 if [[ -z "$header_line" ]]; then
   # No preceding header — show from beginning to first header

@@ -14,9 +14,11 @@ fi
 # Format: filepath<TAB>line_number<TAB>line_content
 # Single find pass — awk separates headers from content
 find -L "$SEARCH_DIR" -name '*.md' -print0 | xargs -0 awk '
-  /^#/  { headers = headers FILENAME "\t" FNR "\t" $0 "\n"; next }
-  NF    { content = content FILENAME "\t" FNR "\t" $0 "\n" }
-  END   { printf "%s%s", headers, content }
+  FNR == 1        { in_code = 0 }
+  /^```/          { in_code = !in_code; }
+  !in_code && /^#/  { headers = headers FILENAME "\t" FNR "\t" $0 "\n"; next }
+  NF              { content = content FILENAME "\t" FNR "\t" $0 "\n" }
+  END             { printf "%s%s", headers, content }
 ' | fzf --delimiter '\t' \
         --with-nth 3.. \
         --preview "$EXTRACT {}" \
