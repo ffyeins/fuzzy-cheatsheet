@@ -19,11 +19,17 @@ find -L "$SEARCH_DIR" -name '*.md' -print0 | xargs -0 awk '
   !in_code && /^#/  { headers = headers FILENAME "\t" FNR "\t" $0 "\n"; next }
   NF              { content = content FILENAME "\t" FNR "\t" $0 "\n" }
   END             { printf "%s%s", headers, content }
-' | fzf --delimiter '\t' \
+' | {
+  if [[ $# -gt 0 ]]; then
+    fzf --delimiter '\t' --with-nth 3.. --filter "$*" | head -1
+  else
+    fzf --delimiter '\t' \
         --with-nth 3.. \
         --preview "$EXTRACT {}" \
         --preview-window=right:60%:wrap \
-        -i | {
+        -i
+  fi
+} | {
   read -r selection
 
   if [[ -n "$selection" ]]; then
