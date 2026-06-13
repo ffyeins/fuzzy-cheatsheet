@@ -25,7 +25,7 @@ find -L "$SEARCH_DIR" -name '*.md' -print0 | xargs -0 awk '
   else
     fzf --delimiter '\t' \
         --with-nth 3.. \
-        --preview "$EXTRACT {}" \
+        --preview "CLICOLOR_FORCE=1 $EXTRACT {}" \
         --preview-window=right:60%:wrap \
         -i
   fi
