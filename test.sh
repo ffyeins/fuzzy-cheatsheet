@@ -1,6 +1,6 @@
 #!/bin/bash
-# Regression tests for fuzzy_cheatsheet.sh and extract_section.sh.
-# Runs query mode and extract_section.sh against the mock notes in docs/,
+# Regression tests for fuzzy_cheatsheet.sh, list_matches.sh and extract_section.sh.
+# Runs query mode and both helpers against the mock notes in docs/,
 # with cat as the renderer so the output is plain markdown.
 # Usage: ./test.sh
 

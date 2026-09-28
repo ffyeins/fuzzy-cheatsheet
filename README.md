@@ -1,6 +1,6 @@
 # Fuzzy Cheatsheet
 
-Fuzzy-search your markdown notes from the terminal. Pick any line and get the whole section it belongs to, rendered.
+Search your markdown notes from the terminal. Pick any line and get the whole section it belongs to, rendered.
 
 ## Requirements
 
@@ -15,11 +15,12 @@ Fuzzy-search your markdown notes from the terminal. Pick any line and get the wh
 mkdir -p ~/dotfiles/scripts/fuzzy-cheatsheet
 ```
 
-2. Copy the scripts. Both must be in the same directory:
+2. Copy the scripts. All three must be in the same directory:
 
 ```bash
 cp extract_section.sh ~/dotfiles/scripts/fuzzy-cheatsheet/
 cp fuzzy_cheatsheet.sh ~/dotfiles/scripts/fuzzy-cheatsheet/
+cp list_matches.sh ~/dotfiles/scripts/fuzzy-cheatsheet/
 ```
 
 3. Add an alias to your shell config (`~/.bashrc` or `~/.zshrc`):
@@ -46,7 +47,13 @@ cheat <query>    # print the best match directly
 - **Interactive:** type to search every line of your notes. The right-hand pane previews the section for the highlighted line; Enter prints it, Esc quits.
 - **Query:** prints the section for the top match without opening fzf, for example `cheat left join`. If nothing matches, it prints `No match for: <query>` and exits with status 1.
 
-Search is fuzzy and case-insensitive, and matches the text of each line, not file names. Before you type, headers are listed ahead of other lines; once you type, results are ranked by how well they match.
+### How search works
+
+- A line matches when it contains what you typed, ignoring case. `git` matches `git add -A` but not `Merging Dicts`.
+- If you type several words, each must appear in the line, in any order.
+- Matching headings are listed first, then other matching lines. Within each group, the best match comes first.
+- Only the text of each line is searched, not file names.
+- Before you type, every line is listed, headings first.
 
 ## Configuration
 
@@ -59,18 +66,20 @@ For example, `SEARCH_DIR=~/notes cheat`.
 
 ## What gets shown
 
-- The section starts at the nearest header above the selected line and runs until the next header of the same or higher level, so subsections are included.
-- For a line above a file's first header, it shows the text from the top of the file down to that header.
-- Lines starting with `#` inside code blocks aren't treated as headers.
+- The section starts at the nearest heading above the selected line and runs until the next heading of the same or higher level, so subsections are included.
+- For a line above a file's first heading, it shows the text from the top of the file down to that heading.
+- Lines starting with `#` inside code blocks aren't treated as headings.
 - An unclosed code block is closed so it still renders correctly.
 
 ## Limitations
 
-- Any line starting with `#` outside a code block counts as a header, including `#!/bin/bash` or `#tag`. Underlined headers (`===` or `---`) aren't recognised.
+- Any line starting with `#` outside a code block counts as a heading, including `#!/bin/bash` or `#tag`. Underlined headings (`===` or `---`) aren't recognised.
 - Only code fences made of three backticks at the start of a line are recognised; `~~~` and indented fences aren't.
 - The opening and closing fence lines of code blocks appear in the search list.
 
 ## Development
 
+- `GUIDELINES.md` defines how the tool should behave. If the code, tests or docs disagree with it, they're wrong.
 - `./test.sh` runs the regression tests against the sample notes in `docs/`.
 - `SEARCH_DIR=docs/ ./fuzzy_cheatsheet.sh` tries it interactively on the sample notes.
+- `SEARCH_DIR=docs/ ./list_matches.sh <query>` prints the ranked matches without opening fzf.
