@@ -4,17 +4,18 @@
 #
 # Finds the nearest preceding header for the given line number, extracts the
 # full section (up to the next header of same or higher level), balances code
-# fences, and renders via mdprint.sh.
+# fences, and pipes the result to the renderer ($MDPRINT) on stdin.
 
 set -euo pipefail
 
 MDPRINT="${MDPRINT:-$HOME/dotfiles/scripts/mdprint.sh}"
-TEMP_FILE=/tmp/fuzzy_cheatsheet_section.md
 
-input="$1"
-filepath="${input%%	*}"
-rest="${input#*	}"
-line_num="${rest%%	*}"
+if [[ $# -ne 1 ]]; then
+  echo "Usage: $(basename "$0") <filepath><TAB><line_num><TAB><line_content>" >&2
+  exit 1
+fi
+
+IFS=$'\t' read -r filepath line_num _ <<< "$1"
 
 if [[ ! -f "$filepath" ]]; then
   echo "File not found: $filepath" >&2
@@ -29,40 +30,26 @@ header_line=$(awk -v end="$line_num" '
   END            { if (last) print last }
 ' "$filepath")
 
-if [[ -z "$header_line" ]]; then
-  # No preceding header — show from beginning to first header
-  awk '
-    /^#/ { exit }
-    { print }
-  ' "$filepath" > "$TEMP_FILE"
-else
-  awk -v start="$header_line" '
-    NR == start {
-      found=1
-      match($0, /^#+/)
-      level=RLENGTH
-      print
-      next
-    }
-    found {
-      if (/^```/) {
-        in_code_block = !in_code_block
-        print
-        next
-      }
-      if (!in_code_block && /^#/) {
-        match($0, /^#+/)
-        new_level=RLENGTH
-        if (new_level <= level) exit
-      }
-      print
-    }
-  ' "$filepath" > "$TEMP_FILE"
-fi
-
-# Close unclosed code fence
-if (( $(grep -c "^\`\`\`" "$TEMP_FILE") % 2 == 1 )); then
-  echo '```' >> "$TEMP_FILE"
-fi
-
-"$MDPRINT" "$TEMP_FILE"
+# Print from the header until the next header of the same or higher level.
+# With no preceding header (start=0), print from line 1 until the first header.
+# Headers inside code blocks are ignored; an unclosed fence is closed at the end.
+awk -v start="${header_line:-0}" '
+  NR < start { next }
+  NR == start {
+    match($0, /^#+/)
+    level=RLENGTH
+    print
+    next
+  }
+  /^```/ {
+    in_code_block = !in_code_block
+    print
+    next
+  }
+  !in_code_block && /^#/ {
+    match($0, /^#+/)
+    if (start == 0 || RLENGTH <= level) exit
+  }
+  { print }
+  END { if (in_code_block) print "```" }
+' "$filepath" | "$MDPRINT"
