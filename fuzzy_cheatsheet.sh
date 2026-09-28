@@ -1,39 +1,53 @@
 #!/bin/bash
 set -uo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Resolve symlinks so the helper scripts are found next to the real script
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 SEARCH_DIR="${SEARCH_DIR:-$HOME/dotfiles/docs/}"
 EXTRACT="$SCRIPT_DIR/extract_section.sh"
+LIST="$SCRIPT_DIR/list_matches.sh"
 
-if [[ ! -x "$EXTRACT" ]]; then
-  echo "extract_section.sh not found at $EXTRACT" >&2
+for helper in "$EXTRACT" "$LIST"; do
+  if [[ ! -x "$helper" ]]; then
+    echo "$(basename "$helper") not found at $helper" >&2
+    exit 1
+  fi
+done
+
+if [[ ! -d "$SEARCH_DIR" ]]; then
+  echo "SEARCH_DIR not found: $SEARCH_DIR" >&2
   exit 1
 fi
 
-# Build fzf input: headers first, then other non-empty lines
-# Format: filepath<TAB>line_number<TAB>line_content
-# Single find pass — awk separates headers from content
-find -L "$SEARCH_DIR" -name '*.md' -print0 | xargs -0 awk '
-  FNR == 1        { in_code = 0 }
-  /^```/          { in_code = !in_code; }
-  !in_code && /^#/  { headers = headers FILENAME "\t" FNR "\t" $0 "\n"; next }
-  NF              { content = content FILENAME "\t" FNR "\t" $0 "\n" }
-  END             { printf "%s%s", headers, content }
-' | {
+# Exported so the preview and reload commands can reference them quoted,
+# whatever $SHELL is, and so list_matches.sh searches the same directory
+export EXTRACT LIST SEARCH_DIR
+
+# list_matches.sh prints filepath<TAB>line_number<TAB>line_content entries:
+# headings first, then other lines, each group ranked best match first.
+# fzf can't rank in groups itself, so interactive mode reloads the list on every
+# query change and --no-sort keeps that order; fzf still filters and highlights.
+# shellcheck disable=SC2016  # single quotes are intended: $LIST, $EXTRACT expand in fzf's shell
+{
   if [[ $# -gt 0 ]]; then
-    fzf --delimiter '\t' --with-nth 3.. --filter "$*" | head -1
+    "$LIST" "$*" | head -1
   else
-    fzf --delimiter '\t' \
+    "$LIST" | fzf --delimiter '\t' \
         --with-nth 3.. \
-        --preview "CLICOLOR_FORCE=1 $EXTRACT {}" \
+        --bind 'change:reload-sync:"$LIST" {q} || true' \
+        --preview 'CLICOLOR_FORCE=1 "$EXTRACT" {}' \
         --preview-window=right:60%:wrap \
+        --no-sort \
+        --exact \
         -i
   fi
 } | {
-  read -r selection
+  IFS= read -r selection
 
   if [[ -n "$selection" ]]; then
     "$EXTRACT" "$selection"
-    rm -f /tmp/fuzzy_cheatsheet_section.md
+  elif [[ $# -gt 0 ]]; then
+    echo "No match for: $*" >&2
+    exit 1
   fi
 }
